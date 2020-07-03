@@ -5,6 +5,7 @@ use bytes::{BytesMut, BufMut};
 use rand::prelude::*;
 use tokio::time::{timeout, Duration};
 use tokio_serial::SerialPort;
+use clap::{Arg, App};
 
 #[cfg(unix)]
 const DEFAULT_TTY: &str = "/dev/tty.usbserial-A50285BI";
@@ -42,23 +43,42 @@ impl Encoder for SerialTester {
 
 #[tokio::main]
 async fn main() {
-    let mut args = env::args();
-    let tty_path = args.nth(1).unwrap_or_else(|| DEFAULT_TTY.into());
-    //let baud = args.nth(2).unwrap_or_else(|| DEFAULT_BAUD.into()).parse::<u32>().unwrap();
+    //let mut args = env::args();
+    //let tty_path = args.nth(1).unwrap_or_else(|| DEFAULT_TTY.into());
+    //let baud = args.nth(2).unwrap_or_else(|| DEFAULT_BAUD.into()).parse::<u32>().unwrap();*/
+    //let tty_path = args.nth(1).unwrap_or_else(|| DEFAULT_TTY.into());
+    let matches = App::new("Serial Tester")
+        .version("0.1.0")
+        .author("Matvei Klimov <klimatt.gu@gmail.com>")
+        .about("Serial port tester")
+        .arg(Arg::with_name("port")
+            .short("p".parse().unwrap())
+            .long("port")
+            .takes_value(true)
+            .help("Serial port to connect"))
+        .arg(Arg::with_name("baud")
+            .short("b".parse().unwrap())
+            .long("baud")
+            .takes_value(true)
+            .help("Serial baudrate"))
+        .get_matches();
 
+
+    let tty_path = matches.value_of("port").unwrap_or_else(|| DEFAULT_TTY.into());
+    let baud = matches.value_of("baud").unwrap_or_else(|| DEFAULT_BAUD.into());
 
     let mut settings = tokio_serial::SerialPortSettings::default();
     let mut port = tokio_serial::Serial::from_path(tty_path.clone(), &settings).unwrap();
 
-    let mut random_array = vec![0u8; 256];
+    let mut random_array = vec![0u8; 20000];
     rand::thread_rng().fill_bytes(&mut random_array);
 
-    let baud : u32 = 110;
+    //let baud : u32 = 110;
 
     println!("======================");
     println!("Start sending {:?} bytes on {:?} baud to {:?}....",random_array.len() , baud, tty_path);
 
-    port.set_baud_rate(baud);
+    port.set_baud_rate(baud.parse().unwrap());
 
     #[cfg(unix)]
         port.set_exclusive(false)
